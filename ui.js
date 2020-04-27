@@ -106,30 +106,52 @@ $(async function () {
    *  If successfully we will setup a new user instance
    */
 
+  function checkForm(inputs) {
+    let inputKeys = Object.keys(inputs);
+    for (let key of inputKeys) {
+      if (!inputs[key]) {
+        throw new EmptyFieldError(key);
+      }
+    }
+  }
   $createAccountForm.on("submit", async function (evt) {
     evt.preventDefault(); // no page refresh
 
     // grab the required fields
-    let name = $("#create-account-name").val();
-    let username = $("#create-account-username").val();
-    let password = $("#create-account-password").val();
-    let newUser;
-
-    // call the create method, which calls the API and then builds a new user instance
-    // **** catches error
+    let inputs = {
+      name: $("#create-account-name").val(),
+      username: $("#create-account-username").val(),
+      password: $("#create-account-password").val(),
+    };
     try {
-      newUser = await User.create(username, password, name);
+      checkForm(inputs);
+
+      let newUser;
+
+      // call the create method, which calls the API and then builds a new user instance
+      // **** catches error
+      try {
+        newUser = await User.create(
+          inputs.username,
+          inputs.password,
+          inputs.name
+        );
+      } catch (err) {
+        let responseTitle = err.response.data.error.title;
+        if (responseTitle) {
+          alert(responseTitle);
+        } else {
+          alert("Error Creating User");
+        }
+      }
+      // ****
+      if (newUser) {
+        currentUser = newUser;
+        syncCurrentUserToLocalStorage();
+        loginAndSubmitForm();
+      }
     } catch (err) {
-      alert(err.response.data.error.title);
-      $("#create-account-name").val("");
-      $("#create-account-username").val("");
-      $("#create-account-password").val("");
-    }
-    // ****
-    if (newUser) {
-      currentUser = newUser;
-      syncCurrentUserToLocalStorage();
-      loginAndSubmitForm();
+      alert(err.message);
     }
   });
 

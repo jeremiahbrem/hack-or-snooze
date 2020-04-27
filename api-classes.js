@@ -209,3 +209,16 @@ class Story {
     this.updatedAt = storyObj.updatedAt;
   }
 }
+
+class FormError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = this.constructor.name;
+  }
+}
+
+class EmptyFieldError extends FormError {
+  constructor(property) {
+    super(`Please enter a ${property}`);
+  }
+}
