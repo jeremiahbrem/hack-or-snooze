@@ -217,8 +217,8 @@ class FormError extends Error {
   }
 }
 
-class EmptyFieldError extends FormError {
-  constructor(property) {
-    super(`Please enter a ${property}`);
+class EmptyInputError extends FormError {
+  constructor(input) {
+    super(`Please enter a ${input}`);
   }
 }

@@ -69,14 +69,30 @@ $(async function () {
     evt.preventDefault(); // no page-refresh on submit
 
     // grab the username and password
-    const username = $("#login-username").val();
-    const password = $("#login-password").val();
-    // call the login static method to build a user instance
-    const userInstance = await User.login(username, password);
-    // set the global user to the user instance
-    currentUser = userInstance;
-    syncCurrentUserToLocalStorage();
-    loginAndSubmitForm();
+    let userInputs = {
+      username: $("#login-username").val(),
+      password: $("#login-password").val(),
+    };
+    // **** throws error if empty inputs
+    try {
+      checkForm(userInputs);
+      // call the login static method to build a user instance
+      // **** catches any error from api response
+      try {
+        const userInstance = await User.login(
+          userInputs.username,
+          userInputs.password
+        );
+        // set the global user to the user instance
+        currentUser = userInstance;
+        syncCurrentUserToLocalStorage();
+        loginAndSubmitForm();
+      } catch (err) {
+        responseError(err, "Login");
+      }
+    } catch (err) {
+      alert(err.message);
+    }
   });
 
   // **** Event listener for submit story, automatically adds to DOM with generateStories
@@ -106,50 +122,59 @@ $(async function () {
    *  If successfully we will setup a new user instance
    */
 
+  // **** checking input form for empty inputs
   function checkForm(inputs) {
     let inputKeys = Object.keys(inputs);
     for (let key of inputKeys) {
       if (!inputs[key]) {
-        throw new EmptyFieldError(key);
+        throw new EmptyInputError(key);
       }
     }
   }
+  // ****
+
+  // **** callback function if there is a api response error
+  function responseError(error, type) {
+    let responseMessage = error.response.data.error.message;
+    if (responseMessage) {
+      alert(responseMessage);
+    } else {
+      alert(`${type} error`);
+    }
+  }
+
   $createAccountForm.on("submit", async function (evt) {
     evt.preventDefault(); // no page refresh
 
     // grab the required fields
+    // **** changed to object so keys and values can both be used in checkForm
     let inputs = {
       name: $("#create-account-name").val(),
       username: $("#create-account-username").val(),
       password: $("#create-account-password").val(),
     };
+
+    // ****
     try {
       checkForm(inputs);
 
       let newUser;
 
       // call the create method, which calls the API and then builds a new user instance
-      // **** catches error
+      // **** catches response error
       try {
         newUser = await User.create(
           inputs.username,
           inputs.password,
           inputs.name
         );
-      } catch (err) {
-        let responseTitle = err.response.data.error.title;
-        if (responseTitle) {
-          alert(responseTitle);
-        } else {
-          alert("Error Creating User");
-        }
-      }
-      // ****
-      if (newUser) {
         currentUser = newUser;
         syncCurrentUserToLocalStorage();
         loginAndSubmitForm();
+      } catch (err) {
+        responseError(err, "Create user");
       }
+      // ****
     } catch (err) {
       alert(err.message);
     }
