@@ -354,16 +354,13 @@ $(async function () {
 
   function generateStoryHTML(story) {
     let hostName = getHostName(story.url);
-    let iconClass;
+    let iconClass = "far fa-star";
     if (currentUser) {
       let favIds = currentUser.favorites.map((fav) => fav.storyId);
       if (favIds.includes(story.storyId)) {
         iconClass = "fas fa-star";
-      } else {
-        iconClass = "far fa-star";
       }
     }
-
     // render story markup
     const storyMarkup = $(`
       <li id="${story.storyId}">
@@ -380,24 +377,21 @@ $(async function () {
     return storyMarkup;
   }
 
-  // **** add an event listener to every fav icon if user logged in
-  $("body").on("click", ".fa-star", async function (evt) {
+  // **** adds event listener to fav icons and calls callback function if user logged in
+  $("body").on("click", ".fa-star", async function () {
     if (currentUser) {
-      await favClick(evt);
+      let $storyId = $(this).parent().attr("id");
+      await favClick(this, $storyId);
     }
   });
-  // ****
 
-  // **** adds or removes favorites with fav icon click
-  async function favClick(evt) {
-    $(evt.target).toggleClass("far fas");
-    // retrieves the story Id from parent list id
-    const id = $(evt.target).parent().attr("id");
-    // adds or removes favorite from user depending on icon status
-    if ($(evt.target).hasClass("fas")) {
-      await User.addFavorite(id, currentUser);
+  // **** callback function - adds or removes favorites with fav icon click
+  async function favClick(icon, storyId) {
+    $(icon).toggleClass("far fas");
+    if ($(icon).hasClass("fas")) {
+      await User.addFavorite(storyId, currentUser);
     } else {
-      await User.removeFavorite(id, currentUser);
+      await User.removeFavorite(storyId, currentUser);
     }
     // updates currentUser data
     await updateCurrentUser();
@@ -433,6 +427,7 @@ $(async function () {
     updateUserProfile();
     $(".fa-bars").show();
     checkScreenSize();
+    await generateStories();
   }
 
   // **** add user information to user profile
