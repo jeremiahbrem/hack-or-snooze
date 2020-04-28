@@ -219,6 +219,6 @@ class FormError extends Error {
 
 class EmptyInputError extends FormError {
   constructor(input) {
-    super(`Please enter a ${input}`);
+    super(`Please enter ${input}`);
   }
 }

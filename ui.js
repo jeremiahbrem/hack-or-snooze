@@ -52,14 +52,6 @@ $(async function () {
   }
   // ****
 
-  // **** add an event listener to every fav icon if user logged in
-  $("body").on("click", ".fa-star", async function (evt) {
-    if (currentUser) {
-      await favClick(evt);
-    }
-  });
-  // ****
-
   /**
    * Event listener for logging in.
    *  If successfully we will setup the user instance
@@ -98,22 +90,36 @@ $(async function () {
   // **** Event listener for submit story, automatically adds to DOM with generateStories
   $submitStoryForm.on("submit", async function (evt) {
     evt.preventDefault();
-    const newStory = new Story({
+    let userInputs = {
       author: $("#author-name").val(),
-      username: currentUser.username,
       title: $("#story-title").val(),
       url: $("#story-url").val(),
-    });
+    };
+    try {
+      checkForm(userInputs);
 
-    if (currentUser) {
-      await StoryList.addStory(currentUser, newStory);
+      const newStory = new Story({
+        username: currentUser.username,
+        author: userInputs.author,
+        title: userInputs.title,
+        url: userInputs.url,
+      });
+      try {
+        if (currentUser) {
+          await StoryList.addStory(currentUser, newStory);
+        }
+      } catch (err) {
+        responseError(err, "Submit story");
+      }
+      $("#author-name").val("");
+      $("#story-title").val("");
+      $("#story-url").val("");
+      $submitStoryForm.slideToggle();
+      await generateStories();
+      updateCurrentUser();
+    } catch (err) {
+      alert(err.message);
     }
-    $("#author-name").val("");
-    $("#story-title").val("");
-    $("#story-url").val("");
-    $submitStoryForm.slideToggle();
-    await generateStories();
-    updateCurrentUser();
   });
   // ****
 
@@ -215,7 +221,6 @@ $(async function () {
     hideElements();
     $allStoriesList.show();
     $submitStoryForm.slideToggle();
-    updateFavIcons();
     $(".dropdown").hide();
   });
 
@@ -229,8 +234,6 @@ $(async function () {
       currentUser.favorites.forEach((story) => {
         $favoriteArticles.append(generateStoryHTML(story));
       });
-      // update favorites icons if favorited
-      updateFavIcons();
     } else {
       $favoriteArticles.html("No favorites added.");
     }
@@ -253,7 +256,6 @@ $(async function () {
     }
     $ownStories.children().prepend('<i class="fas fa-trash-alt"></i>');
     $ownStories.show();
-    updateFavIcons();
     $(".dropdown").hide();
   });
   // ****
@@ -344,19 +346,6 @@ $(async function () {
       const result = generateStoryHTML(story);
       $allStoriesList.append(result);
     }
-    updateFavIcons();
-  }
-
-  // retrieves current User favorites ids and updates fav icons
-  function updateFavIcons() {
-    if (currentUser) {
-      let $icons = Array.from($(".fa-star"));
-      let favIds = currentUser.favorites.map((fav) => fav.storyId);
-      let favorited = $icons.filter((icon) =>
-        favIds.includes($(icon).parent().attr("id"))
-      );
-      favorited.forEach((icon) => (icon.className = "fa-star fas"));
-    }
   }
 
   /**
@@ -365,11 +354,20 @@ $(async function () {
 
   function generateStoryHTML(story) {
     let hostName = getHostName(story.url);
+    let iconClass;
+    if (currentUser) {
+      let favIds = currentUser.favorites.map((fav) => fav.storyId);
+      if (favIds.includes(story.storyId)) {
+        iconClass = "fas fa-star";
+      } else {
+        iconClass = "far fa-star";
+      }
+    }
 
     // render story markup
     const storyMarkup = $(`
       <li id="${story.storyId}">
-        <i class="far fa-star"></i>
+        <i class="${iconClass}"></i>
         <a class="article-link" href="${story.url}" target="a_blank">
           <strong>${story.title}</strong>
         </a>
@@ -381,6 +379,14 @@ $(async function () {
 
     return storyMarkup;
   }
+
+  // **** add an event listener to every fav icon if user logged in
+  $("body").on("click", ".fa-star", async function (evt) {
+    if (currentUser) {
+      await favClick(evt);
+    }
+  });
+  // ****
 
   // **** adds or removes favorites with fav icon click
   async function favClick(evt) {
@@ -425,7 +431,6 @@ $(async function () {
     $navUser.show();
     $navUser.html(`${currentUser.username}`);
     updateUserProfile();
-    updateFavIcons();
     $(".fa-bars").show();
     checkScreenSize();
   }
